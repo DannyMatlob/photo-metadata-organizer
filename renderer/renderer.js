@@ -9,6 +9,58 @@ const state = {
   currentStep:     1
 };
 
+// ── Easter egg (march17) ─────────────────────────────────────────────────────
+let keySequence = '';
+const easterEggCode = 'march17';
+
+document.addEventListener('keypress', (e) => {
+  keySequence += e.key.toLowerCase();
+  if (keySequence.length > easterEggCode.length) {
+    keySequence = keySequence.slice(-easterEggCode.length);
+  }
+  if (keySequence === easterEggCode) {
+    triggerEasterEgg();
+    keySequence = '';
+  }
+});
+
+function triggerEasterEgg() {
+  document.body.classList.toggle('easter-egg');
+  const icon = document.querySelector('.titlebar-icon');
+  const title = document.querySelector('.titlebar-title');
+  if (document.body.classList.contains('easter-egg')) {
+    icon.textContent = '❤️';
+    title.textContent = 'Happy Birthday!!';
+    createConfetti();
+  } else {
+    icon.textContent = '📷';
+    title.textContent = 'Photo Organizer';
+  }
+}
+
+function createConfetti() {
+  const container = document.getElementById('confetti-container');
+  container.classList.add('active');
+  const colors = ['pink', 'hotpink', 'purple', 'lavender'];
+  
+  for (let i = 0; i < 50; i++) {
+    const confetti = document.createElement('div');
+    confetti.className = `confetti ${colors[Math.floor(Math.random() * colors.length)]}`;
+    confetti.style.left = Math.random() * 100 + '%';
+    confetti.style.top = Math.random() * 100 + '%';
+    confetti.style.delay = Math.random() * 0.5 + 's';
+    confetti.style.setProperty('--tx', (Math.random() - 0.5) * 200 + 'px');
+    confetti.style.setProperty('--ty', (Math.random() - 0.5) * 200 + 'px');
+    confetti.style.setProperty('--duration', (Math.random() * 1.5 + 2.5) + 's');
+    container.appendChild(confetti);
+  }
+  
+  setTimeout(() => {
+    container.innerHTML = '';
+    container.classList.remove('active');
+  }, 4500);
+}
+
 // ── Navigation ───────────────────────────────────────────────────────────────
 function goTo(step) {
   document.getElementById(`screen-${state.currentStep}`).classList.remove('visible');
@@ -28,8 +80,9 @@ function goTo(step) {
 // ── Source type toggle ────────────────────────────────────────────────────────
 function setSource(type) {
   state.sourceType = type;
-  ['google','snap','both'].forEach(t => {
-    document.getElementById(`btn-${t}`).classList.toggle('active', t === type);
+  ['google','snapchat','both'].forEach(t => {
+    const btnId = t === 'snapchat' ? 'btn-snap' : `btn-${t}`;
+    document.getElementById(btnId).classList.toggle('active', t === type);
   });
 }
 
