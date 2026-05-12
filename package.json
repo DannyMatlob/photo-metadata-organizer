@@ -1,0 +1,39 @@
+{
+  "name": "photo-organizer",
+  "version": "1.0.0",
+  "description": "Organize Google & Snapchat photo exports by date",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --mac --linux"
+  },
+  "build": {
+    "appId": "com.photoorganizer.app",
+    "productName": "Photo Organizer",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.0"
+  },
+  "dependencies": {
+    "exifreader": "^4.21.1"
+  }
+}

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Photo Organizer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0c0c0e;
+      --surface:  #141416;
+      --surface2: #1c1c1f;
+      --surface3: #242428;
+      --border:   rgba(255,255,255,0.08);
+      --border2:  rgba(255,255,255,0.14);
+      --text:     #f0f0f2;
+      --muted:    #7a7a85;
+      --accent:   #7c6af7;
+      --accent2:  #a89ef9;
+      --success:  #3ecf8e;
+      --warn:     #f59e0b;
+      --danger:   #f87171;
+      --radius:   12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* ── Title bar ── */
+    .titlebar {
+      -webkit-app-region: drag;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .titlebar-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), #4f8ef7);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .titlebar-title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .titlebar-sub   { font-size: 12px; color: var(--muted); margin-left: 2px; }
+
+    /* ── Steps sidebar ── */
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: default;
+      transition: background 0.15s;
+    }
+    .step-item.active  { background: rgba(124,106,247,0.12); }
+    .step-item.done    { opacity: 0.6; }
+    .step-item.pending { opacity: 0.35; }
+    .step-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      flex-shrink: 0;
+    }
+    .step-item.active .step-dot  { border-color: var(--accent); color: var(--accent); background: rgba(124,106,247,0.15); }
+    .step-item.done  .step-dot   { border-color: var(--success); color: var(--success); background: rgba(62,207,142,0.12); }
+    .step-label { font-size: 13px; font-weight: 500; }
+
+    /* ── Main content ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .main::-webkit-scrollbar { width: 4px; }
+    .main::-webkit-scrollbar-track { background: transparent; }
+    .main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+    .screen { display: none; flex-direction: column; gap: 24px; animation: fadeIn 0.2s ease; }
+    .screen.visible { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+    h2 { font-size: 15px; font-weight: 500; color: var(--muted); margin-top: -16px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
+    }
+
+    /* ── Folder picker row ── */
+    .folder-row {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .folder-path {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .folder-path.set { color: var(--text); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border2);
+      background: var(--surface2);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, transform 0.08s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn:hover   { background: var(--surface3); border-color: var(--border2); }
+    .btn:active  { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn.primary {
+      background: var(--accent); border-color: transparent; color: #fff;
+    }
+    .btn.primary:hover { background: #6a59e8; }
+    .btn.success {
+      background: var(--success); border-color: transparent; color: #0a2a1c;
+    }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    /* ── Source type toggle ── */
+    .toggle-row { display: flex; gap: 8px; }
+    .toggle-btn {
+      padding: 8px 16px;
+      border-radius: 40px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .toggle-btn.active {
+      background: rgba(124,106,247,0.15);
+      border-color: var(--accent);
+      color: var(--accent2);
+    }
+
+    /* ── Options grid ── */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .option-card {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .option-card.selected {
+      border-color: var(--accent);
+      background: rgba(124,106,247,0.08);
+    }
+    .option-card input[type=radio] { display: none; }
+    .option-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+    .option-example {
+      font-size: 11px; color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Scan stats ── */
+    .stats-row { display: flex; gap: 12px; }
+    .stat-box {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .stat-num  { font-size: 28px; font-weight: 600; letter-spacing: -1px; }
+    .stat-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Progress ── */
+    .progress-wrap {
+      background: var(--surface2);
+      border-radius: 40px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #4f8ef7);
+      border-radius: 40px;
+      width: 0%;
+      transition: width 0.15s ease;
+    }
+    .progress-label {
+      font-size: 12px; color: var(--muted);
+      display: flex; justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    /* ── Log ── */
+    .log-area {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      height: 140px;
+      overflow-y: auto;
+      line-height: 1.7;
+    }
+    .log-area .ok     { color: var(--success); }
+    .log-area .skip   { color: var(--warn); }
+    .log-area .error  { color: var(--danger); }
+
+    /* ── Result summary ── */
+    .result-grid { display: flex; gap: 12px; }
+    .result-box {
+      flex: 1;
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      text-align: center;
+    }
+    .result-box.ok   { background: rgba(62,207,142,0.1);  border: 1px solid rgba(62,207,142,0.25); }
+    .result-box.warn { background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.25); }
+    .result-box.err  { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); }
+    .result-num  { font-size: 32px; font-weight: 600; }
+    .result-desc { font-size: 12px; color: var(--muted); }
+
+    /* ── Results browser ── */
+    .browser-layout {
+      display: flex; gap: 0; flex: 1;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      min-height: 420px;
+      background: var(--surface);
+    }
+
+    /* Folder tree pane */
+    .tree-pane {
+      width: 200px; flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      overflow-y: auto; overflow-x: hidden;
+      padding: 10px 0;
+    }
+    .tree-pane::-webkit-scrollbar { width: 3px; }
+    .tree-pane::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    .tree-node {
+      display: flex; align-items: center; gap: 7px;
+      padding: 6px 14px;
+      font-size: 12px; cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: background 0.1s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .tree-node:hover   { background: var(--surface2); }
+    .tree-node.active  { background: rgba(124,106,247,0.1); border-left-color: var(--accent); color: var(--accent2); }
+    .tree-node.indent  { padding-left: 28px; }
+    .tree-node .tree-count {
+      margin-left: auto; font-size: 10px;
+      color: var(--muted); flex-shrink: 0;
+    }
+    .tree-node .tree-arrow {
+      font-size: 9px; color: var(--muted); flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .tree-node.open .tree-arrow { transform: rotate(90deg); }
+
+    /* Photo grid pane */
+    .grid-pane {
+      flex: 1; overflow-y: auto;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 8px;
+      align-content: start;
+    }
+    .grid-pane::-webkit-scrollbar { width: 3px; }
+    .grid-pane::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+    .grid-pane.empty {
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 13px;
+    }
+
+    .photo-thumb {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--surface2);
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.1s, transform 0.1s;
+      position: relative;
+    }
+    .photo-thumb:hover  { border-color: var(--border2); transform: scale(1.02); }
+    .photo-thumb.active { border-color: var(--accent); }
+    .photo-thumb img    { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-thumb .vid-badge {
+      position: absolute; bottom: 4px; right: 4px;
+      background: rgba(0,0,0,0.65); color: #fff;
+      font-size: 9px; padding: 2px 5px; border-radius: 3px;
+    }
+    .photo-thumb .thumb-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 22px;
+    }
+
+    /* Detail pane */
+    .detail-pane {
+      width: 210px; flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      padding: 16px 14px;
+      overflow-y: auto;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .detail-pane::-webkit-scrollbar { width: 3px; }
+    .detail-pane::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    .detail-preview {
+      width: 100%; aspect-ratio: 1;
+      border-radius: var(--radius-sm);
+      background: var(--surface2);
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .detail-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .detail-preview .detail-placeholder { font-size: 36px; }
+
+    .detail-meta { display: flex; flex-direction: column; gap: 8px; }
+    .detail-row  { display: flex; flex-direction: column; gap: 2px; }
+    .detail-key  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .detail-val  { font-size: 12px; word-break: break-all; line-height: 1.4; }
+
+    .detail-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      flex: 1; color: var(--muted); font-size: 12px; text-align: center; gap: 8px;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .spinner.visible { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hint { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<!-- Title bar -->
+<div class="titlebar">
+  <div class="titlebar-icon">📷</div>
+  <span class="titlebar-title">Photo Organizer</span>
+  <span class="titlebar-sub">— Google &amp; Snapchat export sorter</span>
+</div>
+
+<div class="layout">
+  <!-- Sidebar steps -->
+  <nav class="sidebar" id="sidebar">
+    <div class="step-item active" data-step="1">
+      <div class="step-dot">1</div>
+      <span class="step-label">Source</span>
+    </div>
+    <div class="step-item pending" data-step="2">
+      <div class="step-dot">2</div>
+      <span class="step-label">Output</span>
+    </div>
+    <div class="step-item pending" data-step="3">
+      <div class="step-dot">3</div>
+      <span class="step-label">Options</span>
+    </div>
+    <div class="step-item pending" data-step="4">
+      <div class="step-dot">4</div>
+      <span class="step-label">Preview</span>
+    </div>
+    <div class="step-item pending" data-step="5">
+      <div class="step-dot">5</div>
+      <span class="step-label">Organise</span>
+    </div>
+    <div class="step-item pending" data-step="6">
+      <div class="step-dot">6</div>
+      <span class="step-label">Browse results</span>
+    </div>
+  </nav>
+
+  <div class="main">
+
+    <!-- ── Screen 1: Source ── -->
+    <div class="screen visible" id="screen-1">
+      <h1>Select your export folder</h1>
+      <h2>Point to the folder from Google Takeout or Snapchat Memories export</h2>
+
+      <div class="card">
+        <div class="card-label">Export type</div>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-google" onclick="setSource('google')">📦 Google Takeout</button>
+          <button class="toggle-btn" id="btn-snap" onclick="setSource('snapchat')">👻 Snapchat</button>
+          <button class="toggle-btn" id="btn-both" onclick="setSource('both')">Both / Mixed</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Source folder</div>
+        <div class="folder-row">
+          <div class="folder-path" id="source-path">No folder selected</div>
+          <button class="btn" onclick="pickSource()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+            Browse…
+          </button>
+        </div>
+        <p class="hint" style="margin-top:10px" id="source-hint">
+          For Google Takeout: select the top-level unzipped folder (e.g. <code style="background:var(--surface3);padding:1px 5px;border-radius:4px">Google Photos</code>).<br>
+          For Snapchat: select the folder containing <code style="background:var(--surface3);padding:1px 5px;border-radius:4px">memories_history.json</code>.
+        </p>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="btn-next-1" onclick="goTo(2)" disabled>
+          Continue →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Screen 2: Output ── -->
+    <div class="screen" id="screen-2">
+      <h1>Where to save organised photos</h1>
+      <h2>Files will be copied (not moved) to this destination</h2>
+
+      <div class="card">
+        <div class="card-label">Destination folder</div>
+        <div class="folder-row">
+          <div class="folder-path" id="output-path">No folder selected</div>
+          <button class="btn" onclick="pickOutput()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+            Browse…
+          </button>
+        </div>
+        <p class="hint" style="margin-top:10px">Your originals are never deleted — this app only copies files.</p>
+      </div>
+
+      <div class="actions">
+        <button class="btn" onclick="goTo(1)">← Back</button>
+        <button class="btn primary" id="btn-next-2" onclick="goTo(3)" disabled>Continue →</button>
+      </div>
+    </div>
+
+    <!-- ── Screen 3: Options ── -->
+    <div class="screen" id="screen-3">
+      <h1>Folder structure &amp; options</h1>
+      <h2>Choose how your photos will be arranged</h2>
+
+      <div class="card">
+        <div class="card-label">Folder structure</div>
+        <div class="options-grid" id="structure-grid">
+          <label class="option-card selected" onclick="selectStructure(this, 'year-month-name')">
+            <input type="radio" name="structure" value="year-month-name" checked>
+            <div class="option-title">Year / Month (named)</div>
+            <div class="option-example">2023 / 06-June / photo.jpg</div>
+          </label>
+          <label class="option-card" onclick="selectStructure(this, 'year-month')">
+            <input type="radio" name="structure" value="year-month">
+            <div class="option-title">Year / Month (number)</div>
+            <div class="option-example">2023 / 06 / photo.jpg</div>
+          </label>
+          <label class="option-card" onclick="selectStructure(this, 'year')">
+            <input type="radio" name="structure" value="year">
+            <div class="option-title">Year only</div>
+            <div class="option-example">2023 / photo.jpg</div>
+          </label>
+          <label class="option-card" onclick="selectStructure(this, 'year-month-day')">
+            <input type="radio" name="structure" value="year-month-day">
+            <div class="option-title">Year / Month / Day</div>
+            <div class="option-example">2023 / 06 / 15 / photo.jpg</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Duplicate handling</div>
+        <div class="options-grid">
+          <label class="option-card selected" onclick="selectDupe(this, 'skip')">
+            <input type="radio" name="dupes" value="skip" checked>
+            <div class="option-title">Skip duplicates</div>
+            <div class="option-example">Leave existing file untouched</div>
+          </label>
+          <label class="option-card" onclick="selectDupe(this, 'rename')">
+            <input type="radio" name="dupes" value="rename">
+            <div class="option-title">Rename new file</div>
+            <div class="option-example">photo_1.jpg, photo_2.jpg…</div>
+          </label>
+          <label class="option-card" onclick="selectDupe(this, 'overwrite')">
+            <input type="radio" name="dupes" value="overwrite">
+            <div class="option-title">Overwrite</div>
+            <div class="option-example">Replace existing file</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" onclick="goTo(2)">← Back</button>
+        <button class="btn primary" onclick="runScan()">
+          <div class="spinner" id="scan-spinner"></div>
+          Scan &amp; Preview →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Screen 4: Preview ── -->
+    <div class="screen" id="screen-4">
+      <h1>Preview</h1>
+      <h2>Review what will be organised before committing</h2>
+
+      <div class="stats-row" id="stats-row">
+        <div class="stat-box"><div class="stat-num" id="stat-total">—</div><div class="stat-desc">Photos found</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-exif">—</div><div class="stat-desc">With metadata</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-fallback">—</div><div class="stat-desc">Date estimated</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-size">—</div><div class="stat-desc">Total size</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Sample of files to be created</div>
+        <div class="log-area" id="preview-log"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" onclick="goTo(3)">← Back</button>
+        <button class="btn primary" onclick="startOrganise()">
+          ✓ Organise Photos
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Screen 5: Progress / Done ── -->
+    <div class="screen" id="screen-5">
+      <h1 id="progress-title">Organising photos…</h1>
+      <h2 id="progress-sub">Please wait, do not close the window</h2>
+
+      <div class="card">
+        <div class="card-label">Progress</div>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="prog-bar"></div>
+        </div>
+        <div class="progress-label">
+          <span id="prog-count">0 / 0</span>
+          <span id="prog-pct">0%</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">Log</div>
+        <div class="log-area" id="run-log"></div>
+      </div>
+
+      <!-- Shown when done -->
+      <div id="result-section" style="display:none; flex-direction:column; gap:16px">
+        <div class="result-grid">
+          <div class="result-box ok">
+            <div class="result-num ok" id="res-done" style="color:var(--success)">0</div>
+            <div class="result-desc">Copied</div>
+          </div>
+          <div class="result-box warn">
+            <div class="result-num" id="res-skip" style="color:var(--warn)">0</div>
+            <div class="result-desc">Skipped</div>
+          </div>
+          <div class="result-box err">
+            <div class="result-num" id="res-err" style="color:var(--danger)">0</div>
+            <div class="result-desc">Errors</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" onclick="openBrowser()">🖼 Browse results</button>
+          <button class="btn success" onclick="openOutput()">📂 Open in Explorer</button>
+          <button class="btn" onclick="startOver()">Start over</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Screen 6: Results Browser ── -->
+    <div class="screen" id="screen-6" style="flex:1; min-height:0; overflow:hidden; padding:0; gap:0">
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 14px; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--surface)">
+        <div>
+          <div style="font-size:17px; font-weight:600; letter-spacing:-0.2px">Results browser</div>
+          <div id="browser-subtitle" style="font-size:12px; color:var(--muted); margin-top:2px">Loading…</div>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="btn" onclick="openOutput()">📂 Open folder</button>
+          <button class="btn" onclick="startOver()">Start over</button>
+        </div>
+      </div>
+
+      <div class="browser-layout" style="margin:16px 24px; flex:1; min-height:0">
+
+        <!-- Folder tree -->
+        <div class="tree-pane" id="tree-pane">
+          <div style="padding:20px; color:var(--muted); font-size:12px">Loading…</div>
+        </div>
+
+        <!-- Photo grid -->
+        <div class="grid-pane empty" id="grid-pane">
+          <span>Select a folder on the left</span>
+        </div>
+
+        <!-- Detail panel -->
+        <div class="detail-pane" id="detail-pane">
+          <div class="detail-empty">
+            <div style="font-size:28px">🖼</div>
+            <span>Click a photo to see details</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
