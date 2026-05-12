@@ -9,9 +9,9 @@ const state = {
   currentStep:     1
 };
 
-// ── Easter egg (march17) ─────────────────────────────────────────────────────
+// ── Easter egg  ─────────────────────────────────────────────────────
 let keySequence = '';
-const easterEggCode = 'march17';
+const easterEggCode = 'penis';
 
 document.addEventListener('keypress', (e) => {
   keySequence += e.key.toLowerCase();
@@ -28,13 +28,16 @@ function triggerEasterEgg() {
   document.body.classList.toggle('easter-egg');
   const icon = document.querySelector('.titlebar-icon');
   const title = document.querySelector('.titlebar-title');
+  const sub = document.querySelector('.titlebar-sub');
   if (document.body.classList.contains('easter-egg')) {
     icon.textContent = '❤️';
-    title.textContent = 'Happy Birthday!!';
+    title.textContent = 'Happy Birthday Pookiebear!!';
+    sub.textContent = '— u so cute wanna go on a date 👉👈';
     createConfetti();
   } else {
     icon.textContent = '📷';
     title.textContent = 'Photo Organizer';
+    sub.textContent = '— Google & Snapchat export sorter';
   }
 }
 
@@ -43,7 +46,7 @@ function createConfetti() {
   container.classList.add('active');
   const colors = ['pink', 'hotpink', 'purple', 'lavender'];
   
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 300; i++) {
     const confetti = document.createElement('div');
     confetti.className = `confetti ${colors[Math.floor(Math.random() * colors.length)]}`;
     confetti.style.left = Math.random() * 100 + '%';
