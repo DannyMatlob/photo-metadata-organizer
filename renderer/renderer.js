@@ -54,6 +54,14 @@ async function pickOutput() {
   document.getElementById('btn-next-2').disabled = false;
 }
 
+async function browseExisting() {
+  const p = await window.api.pickOutput();
+  if (!p) return;
+  state.outputPath = p;
+  goTo(6);
+  await loadBrowser();
+}
+
 // ── Options ───────────────────────────────────────────────────────────────────
 function selectStructure(el, value) {
   document.querySelectorAll('#structure-grid .option-card').forEach(c => c.classList.remove('selected'));
